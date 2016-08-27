@@ -1,0 +1,250 @@
+---
+title: "数据分析"
+subtitle: "175-184"
+author: "姜晓东"
+date: "`r Sys.Date()`"
+
+output:
+    beamer_presentation:
+        slide_level: 2
+        theme: CambridgeUS
+        keep_tex: no
+        pandoc_args: --latex-engine=xelatex
+        includes:
+            in_header: header.tex
+    md_document:
+         variant: markdown_github
+---
+
+```{r echo=FALSE, fig.height=6, fig.width=9} 
+library(ggplot2);
+library(MASS);
+allData=read.csv("allData_175to184.csv");
+allData=subset(allData, fixation>0);
+allData$ifcontrol=ifelse(allData$fileID==179 | allData$fileID==182, "Treat", "Control");
+allData$ifcontrol=as.factor(allData$ifcontrol);
+
+```
+
+
+
+
+# 旧数据Summary
+
+## 成功率
+
+```{r, echo=FALSE}
+tmp=ddply(allData, .(fileID), function(x){
+      with(x, data.frame(
+          vis_total=length(which(V6==1 & V7==1)),
+          vis_succ=length(which(V6==1 & V7==4 & V2==0)),
+          mem_total=length(which(V6==2 & V7==1)),
+          mem_succ=length(which(V6==2 & V7==4 & V2==0))
+      ))
+});
+
+tmp$vis=with(tmp, vis_succ/vis_total);
+tmp$mem=with(tmp, mem_succ/mem_total);
+
+mylen=length(tmp[,1]);
+
+
+tmp2=data.frame(File_ID=rep(tmp$fileID, 2), 
+                Correct_Rate=c(tmp$vis, tmp$mem),
+                Label=c(rep("vis",mylen), rep("mem", mylen)));
+
+#tmp2[is.nan(tmp2$Correct_Rate),]$Correct_Rate=0;
+
+ggplot(data=tmp2, aes(x=File_ID, y=Correct_Rate, group=Label, color=Label, fill=Label)) + 
+        geom_point() + 
+	scale_x_continuous(breaks=175:184) +
+	geom_smooth();               
+
+```
+
+
+
+
+## 失败分析
+```{r echo=FALSE}
+allData_treat=subset(allData, fileID==179 | fileID==182);
+allData_tmp=allData;
+allData=allData_treat;
+
+total_sacc=length(allData[,1]);
+total_errors=with(allData, length(which(V2!=0)));
+
+```
+
+实验组失败Saccades为`r total_errors`个（总数`r total_sacc`个），占总数的`r total_errors*100/total_sacc`%。
+
+失败分布如下：
+
+```{r echo=FALSE}
+tmp=ddply(allData, .(window), function(x){
+    Err_Count=with(x, length(which(V2!=0)))
+});
+
+tmp
+allData=allData_tmp;
+```
+
+
+
+## 失败分析
+```{r echo=FALSE}
+allData_treat=subset(allData, fileID!=179 & fileID!=182);
+allData_tmp=allData;
+allData=allData_treat;
+
+total_sacc=length(allData[,1]);
+total_errors=with(allData, length(which(V2!=0)));
+
+```
+
+对照组失败Saccades为`r total_errors`个（总数`r total_sacc`个），占总数的`r total_errors*100/total_sacc`%。
+
+失败分布如下：
+
+```{r echo=FALSE}
+tmp=ddply(allData, .(window), function(x){
+    Err_Count=with(x, length(which(V2!=0)))
+});
+
+tmp
+allData=allData_tmp;
+```
+
+
+
+## Latency 分布
+
+```{r echo=FALSE}
+allData=subset(allData, full==1);
+
+pic=ggplot(data=allData) + geom_point(aes(x=m_index, y=latency, color=ifcontrol), size=0.4, shape=16, alpha=0.6) +
+                           facet_wrap(~window, ncol=4) +
+			   scale_color_manual(values=c("red", "blue")) +
+                           xlab("Trials") + ylab("Latency (ms)") +
+                           theme(legend.position='right'); 
+
+print(pic);
+
+```
+
+## Duration 分布
+
+
+```{r echo=FALSE}
+pic=ggplot(data=allData) + geom_point(aes(x=m_index, y=duration, color=ifcontrol), size=0.4, shape=16, alpha=0.6) +
+                           facet_wrap(~window, ncol=4) +
+			   scale_color_manual(values=c("red", "blue")) +
+                           xlab("Trials") + ylab("Duration (ms)") +
+                           theme(legend.position='right');
+print(pic);
+
+```
+
+
+## Interval 分布
+
+```{r echo=FALSE}
+allData2=subset(allData, window>1);
+pic=ggplot(data=allData2) + geom_point(aes(x=m_index, y=interval, color=ifcontrol), size=0.4, shape=16, alpha=0.6) +
+                           facet_wrap(~window, ncol=4) +
+			   scale_color_manual(values=c("red", "blue")) +
+                           xlab("Trials") + ylab("Interval (ms)") +
+                           theme(legend.position='right');
+print(pic);
+```
+
+
+## Latency vs Duration (Treat)
+
+```{r echo=FALSE}
+
+pic=ggplot(data=subset(allData, ifcontrol=="Treat")) + geom_point(aes(x=latency, y=duration, color=rewards), size=0.4, shape=16, alpha=0.6) +
+                           geom_smooth(aes(x=latency, y=duration), method="rlm") +
+                           facet_wrap(~window, ncol=4) +
+                           xlab("Latency (ms)") + ylab("Duration (ms)") +
+                           scale_color_gradient(low="yellow", high="red") +
+                           theme(legend.position='right');
+
+print(pic);
+```
+
+
+
+## Latency vs Duration (Control)
+
+```{r echo=FALSE}
+
+pic=ggplot(data=subset(allData, ifcontrol=="Control")) + geom_point(aes(x=latency, y=duration, color=rewards), size=0.4, shape=16, alpha=0.6) +
+                           geom_smooth(aes(x=latency, y=duration), method="rlm") +
+                           facet_wrap(~window, ncol=4) +
+                           xlab("Latency (ms)") + ylab("Duration (ms)") +
+                           scale_color_gradient(low="yellow", high="red") +
+                           theme(legend.position='right');
+
+print(pic);
+```
+
+
+ \tiny {\color{blue} 蓝色的的线是回归线，采用保守的稳健回归，除了5号窗口外，都有统计学意义。}
+
+
+## Latency vs Duration
+
+```{r echo=FALSE}
+pic=ggplot(data=allData) + geom_point(aes(x=latency, y=duration, color=rewards), size=0.2, shape=16, alpha=0.6) +
+                           geom_smooth(aes(x=latency, y=duration), method="rlm") +
+                           geom_smooth(aes(x=latency, y=duration), method="lm", col="red") +
+                           facet_wrap(~window, ncol=4) +
+                           xlab("Latency (ms)") + ylab("Duration (ms)") +
+                           scale_color_gradient(low="yellow", high="red") +
+                           theme(legend.position='right');
+
+print(pic);
+```
+
+\tiny {\color{blue} 红色的的线是普通线性回归线，都有统计学意义。}
+
+
+## Fixation vs Duration
+
+```{r echo=FALSE}
+pic=ggplot(data=allData) + geom_point(aes(x=fixation, y=duration, color=rewards), size=0.2, shape=16, alpha=0.6) +
+                           geom_smooth(aes(x=fixation, y=duration), method="rlm") +
+                           facet_wrap(~window, ncol=4) +
+                           xlab("Fixation (ms)") + ylab("Duration (ms)") +
+                           scale_color_gradient(low="yellow", high="red") +
+                           theme(legend.position='right');
+
+print(pic);
+```
+
+## Latency vs Fixation
+
+```{r echo=FALSE}
+pic=ggplot(data=allData) + geom_point(aes(x=latency, y=fixation, color=rewards), size=0.2, shape=16, alpha=0.6) +
+                           facet_wrap(~window, ncol=4) +
+                           xlab("Latency (ms)") + ylab("Fixation (ms)") +
+                           scale_color_gradient(low="yellow", high="red") +
+                           theme(legend.position='right');
+
+print(pic);
+```
+
+
+
+## 关于本文档
+
+所有代码在 https://github.com/JiangXD/old_data , 方便查看。
+
+generate_logs.R 用于生成Log文件；
+
+extract_Data_from_HTB.R 用于提取数据，存入到allData_175to184.csv文件中；
+
+数据分析*.Rmd 利用上述csv文件，统计绘图并生成pdf展示文件。
+
+ 
