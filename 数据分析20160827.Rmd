@@ -239,9 +239,8 @@ print(pic);
 
 ## 关于本文档
 
-所有代码在 https://github.com/JiangXD/old_data , 方便查看。
+所有代码在 https://github.com/JiangXD/175-184 , 方便查看。
 
-generate_logs.R 用于生成Log文件；
 
 extract_Data_from_HTB.R 用于提取数据，存入到allData_175to184.csv文件中；
 
